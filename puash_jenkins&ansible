@@ -1,0 +1,51 @@
+ля початку, змінимо Dockerfile, щоб додати команду для копіювання конфігурації Jenkins, яка зберігає логін користувача:
+
+# Використовуємо офіційний образ Jenkins
+FROM jenkins/jenkins:latest
+
+# Перемикаємося на користувача root для встановлення пакетів
+USER root
+
+# Встановлюємо необхідні пакети та Ansible
+RUN apt-get update && \
+    apt-get install -y python3-venv python3-dev && \
+    python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --upgrade pip && \
+    /opt/venv/bin/pip install ansible
+
+# Повертаємося до користувача jenkins
+USER jenkins
+
+# Копіюємо конфігураційний файл Jenkins для збереження логіну користувача
+COPY --chown=jenkins:jenkins config.xml /var/jenkins_home/config.xml
+Тепер ми повинні створити файл config.xml, в якому буде зберігатися логін користувача. Ми можемо створити його за допомогою текстового редактора або використовуючи командний рядок. Для цього прикладу, додамо туди лише мітку:
+
+<jenkins>
+    <useSecurity>true</useSecurity>
+    <authorizationStrategy class="hudson.security.AuthorizationStrategy$Unsecured"/>
+    <securityRealm class="hudson.security.SecurityRealm$None"/>
+</jenkins>
+Тепер збережіть цей файл як config.xml в тому ж каталозі, де знаходиться Dockerfile.
+
+Тепер ми зможемо збудувати образ Docker та запустити контейнер. Щоб це зробити, відкрийте термінал і перейдіть до каталогу з файлами Dockerfile та config.xml. Виконайте наступні команди:
+
+# Збираємо образ Docker
+docker build -t jenkins-ansible -f Dockerfile .
+
+# Запускаємо контейнер
+docker run -d --name jenkins-ansible -p 8080:8080 -p 50000:50000 jenkins-ansible
+Тепер ваш Docker-контейнер запущено, і ви можете перевірити, чи працює Jenkins, перейшовши за посиланням http://localhost:8080 у вашому веб-браузері.
+
+Наступний крок - затегувати та запушити цей образ до Docker Hub:
+
+# Загружаємо образ на Docker Hub
+docker tag jenkins-ansible your_dockerhub_username/jenkins-ansible
+
+# Запускаємо команду docker login, щоб увійти до Docker Hub
+docker login
+
+# Пушимо образ до Docker Hub
+docker push your_dockerhub_username/jenkins-ansible
+Замініть your_dockerhub_username на ваше користувацьке ім'я на Docker Hub. Після цього вас запросять ввести ваш логін та пароль для Docker Hub.
+
+Це все! Тепер ваш Docker-образ "jenkins-ansible" з логіном користувача успішно збудовано, запущено та опубліковано на Docker Hub.
